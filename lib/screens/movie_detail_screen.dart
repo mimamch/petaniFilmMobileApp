@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:better_player/better_player.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/components/masked_image.dart';
 import 'package:flutter_application_1/constants.dart';
+import 'package:flutter_application_1/models/link.dart';
 import 'package:flutter_application_1/models/movie.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:flutter_svg/svg.dart';
@@ -31,26 +33,82 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
   String releaseDate = '-';
   String duration = '-';
   MovieDetails? details;
-  void getData() async {
+  List<Link>? streamingLinks;
+  List<Link>? downloadLinks;
+  Future<void> getData() async {
     try {
-      // 'http://mimamch.online:4001/movie/get-movie-by-tmdb-id/616037'
-
       Response data = await Dio().get(
           '${Constants.petaniFilmBaseUrl}/movie/get-movie-by-tmdb-id/${widget.tmdbId}');
+      Response links = await Dio().get(
+          '${Constants.petaniFilmBaseUrl}/movie/get-movie-links?tmdbId=${widget.tmdbId}');
+
+      Iterable it = links.data['data']['streamingLinks'];
+      List<Link> streamLink = it.map((e) => Link.fromJson(e)).toList();
       setState(() {
+        streamingLinks = streamLink;
+        betterPlayerDataSource = BetterPlayerDataSource(
+            BetterPlayerDataSourceType.network,
+            (streamingLinks != null && streamingLinks!.length > 0)
+                ? streamingLinks![0].link
+                : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+
+        _betterPlayerController = BetterPlayerController(
+            BetterPlayerConfiguration(
+              aspectRatio: 16 / 9,
+              errorBuilder: (context, errorMessage) => Text('$errorMessage'),
+            ),
+            betterPlayerDataSource: betterPlayerDataSource);
         details = MovieDetails.fromJson(data.data['data']);
+        videoLoading = false;
       });
     } catch (e) {
       debugPrint(e.toString());
+      // Navigator.pop(context);
     }
   }
 
+  bool videoLoading = true;
+  late BetterPlayerDataSource betterPlayerDataSource;
+
+  late BetterPlayerController _betterPlayerController;
   @override
   void initState() {
     if (mounted) {
-      getData();
+      initFunction();
     }
+
     super.initState();
+  }
+
+  void initFunction() async {
+    getData();
+    print(streamingLinks?[0].link);
+    betterPlayerDataSource = BetterPlayerDataSource(
+        BetterPlayerDataSourceType.network,
+        streamingLinks != null
+            ? streamingLinks![0].link
+            : "https://media.developer.dolby.com/Atmos/MP4/Universe_Fury2.mp4");
+
+    _betterPlayerController = BetterPlayerController(
+        BetterPlayerConfiguration(
+          aspectRatio: 16 / 9,
+          errorBuilder: (context, errorMessage) => Text('$errorMessage'),
+        ),
+        betterPlayerDataSource: betterPlayerDataSource);
+    _betterPlayerController.addEventsListener((event) {
+      if (event == BetterPlayerEventType.exception) {
+        debugPrint('got ERRROR');
+      }
+    });
+    _betterPlayerController
+        .setupDataSource(betterPlayerDataSource)
+        .then((response) {
+      setState(() {
+        videoLoading = false;
+      });
+    }).catchError((error) async {
+      debugPrint('VIDEO ERROR');
+    });
   }
 
   @override
@@ -67,7 +125,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         foregroundColor: Constants.kBlackColor,
       ),
       backgroundColor: Constants.kWhiteColor.withOpacity(0.95),
-      body: (details == null)
+      body: (details == null || videoLoading == true)
           ? Center(
               child: CircularProgressIndicator(
                 color: Constants.kBlackColor,
@@ -75,16 +133,15 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             )
           : ListView(
               children: [
-                Container(
-                  height: screenHeight * 0.5,
-                  width: screenWidth,
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                        image: NetworkImage(
-                            'https://image.tmdb.org/t/p/w500/${widget.imageUrl}'),
-                        fit: BoxFit.cover),
-                  ),
-                ),
+                AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: videoLoading
+                        ? Center(
+                            child: CircularProgressIndicator(
+                              color: Constants.kBlackColor,
+                            ),
+                          )
+                        : BetterPlayer(controller: _betterPlayerController)),
                 Container(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
@@ -113,7 +170,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                               height: screenHeight <= 667 ? 10 : 20,
                             ),
                             Text(
-                              '${details?.releaseDate ?? '-'} | ${details?.runtime ?? 0} minutes | ${details!.genreFinal}',
+                              '${details?.releaseDate ?? '-'} | ${details?.runtime ?? 0} minutes | ${details?.genreFinal}',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 13,
