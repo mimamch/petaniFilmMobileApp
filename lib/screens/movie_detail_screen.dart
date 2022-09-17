@@ -46,6 +46,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       List<Link> streamLink = it.map((e) => Link.fromJson(e)).toList();
       setState(() {
         streamingLinks = streamLink;
+
         betterPlayerDataSource = BetterPlayerDataSource(
             BetterPlayerDataSourceType.network,
             (streamingLinks != null && streamingLinks!.length > 0)
@@ -59,6 +60,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             ),
             betterPlayerDataSource: betterPlayerDataSource);
         details = MovieDetails.fromJson(data.data['data']);
+
         videoLoading = false;
       });
     } catch (e) {
@@ -69,7 +71,6 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   bool videoLoading = true;
   late BetterPlayerDataSource betterPlayerDataSource;
-
   late BetterPlayerController _betterPlayerController;
   @override
   void initState() {
@@ -82,32 +83,21 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
 
   void initFunction() async {
     getData();
-    print(streamingLinks?[0].link);
-    betterPlayerDataSource = BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        streamingLinks != null
-            ? streamingLinks![0].link
-            : "https://media.developer.dolby.com/Atmos/MP4/Universe_Fury2.mp4");
+  }
 
-    _betterPlayerController = BetterPlayerController(
-        BetterPlayerConfiguration(
-          aspectRatio: 16 / 9,
-          errorBuilder: (context, errorMessage) => Text('$errorMessage'),
-        ),
-        betterPlayerDataSource: betterPlayerDataSource);
-    _betterPlayerController.addEventsListener((event) {
-      if (event == BetterPlayerEventType.exception) {
-        debugPrint('got ERRROR');
-      }
-    });
-    _betterPlayerController
-        .setupDataSource(betterPlayerDataSource)
-        .then((response) {
-      setState(() {
-        videoLoading = false;
-      });
-    }).catchError((error) async {
-      debugPrint('VIDEO ERROR');
+  void changeStreamingServer(Link link) {
+    setState(() {
+      print(link.link);
+
+      betterPlayerDataSource =
+          BetterPlayerDataSource(BetterPlayerDataSourceType.network, link.link);
+
+      _betterPlayerController = BetterPlayerController(
+          BetterPlayerConfiguration(
+            aspectRatio: 16 / 9,
+            errorBuilder: (context, errorMessage) => Text('$errorMessage'),
+          ),
+          betterPlayerDataSource: betterPlayerDataSource);
     });
   }
 
@@ -125,7 +115,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         foregroundColor: Constants.kBlackColor,
       ),
       backgroundColor: Constants.kWhiteColor.withOpacity(0.95),
-      body: (details == null || videoLoading == true)
+      body: (details == null)
           ? Center(
               child: CircularProgressIndicator(
                 color: Constants.kBlackColor,
@@ -143,79 +133,97 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                           )
                         : BetterPlayer(controller: _betterPlayerController)),
                 Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       SizedBox(
-                        width: screenWidth * 0.7,
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              height: 20,
-                            ),
-                            Text(
-                              widget.title +
-                                  ' (${details?.releaseYear ?? '-'})',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Constants.kBlackColor.withOpacity(
-                                  0.85,
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              height: screenHeight <= 667 ? 10 : 20,
-                            ),
-                            Text(
-                              '${details?.releaseDate ?? '-'} | ${details?.runtime ?? 0} minutes | ${details?.genreFinal}',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Constants.kBlackColor.withOpacity(
-                                  0.75,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                            RatingBar.builder(
-                              itemSize: 14,
-                              initialRating: widget.rating / 2,
-                              minRating: 1,
-                              maxRating: 5,
-                              direction: Axis.horizontal,
-                              itemCount: 5,
-                              allowHalfRating: true,
-                              itemPadding:
-                                  const EdgeInsets.symmetric(horizontal: 1),
-                              itemBuilder: (context, _) => const Icon(
-                                Icons.star,
-                                color: Constants.kYellowColor,
-                              ),
-                              onRatingUpdate: (rating) {
-                                debugPrint(rating.toString());
-                              },
-                              unratedColor: Constants.kBlackColor,
-                            ),
-                            const SizedBox(
-                              height: 20,
-                            ),
-                            Text(
-                              widget.overview,
-                              textAlign: TextAlign.center,
-                              maxLines: screenHeight <= 667 ? 2 : 4,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Constants.kBlackColor.withOpacity(
-                                  0.75,
-                                ),
-                              ),
-                            )
-                          ],
+                        height: 20,
+                      ),
+                      Text('Streaming Server :'),
+                      Wrap(
+                        spacing: 10,
+                        children: streamingLinks!
+                            .map((e) => ElevatedButton(
+                                  onPressed: () {
+                                    changeStreamingServer(e);
+                                  },
+                                  child: Text(
+                                    '${e.provider}',
+                                    style: TextStyle(
+                                      color: Constants.kWhiteColor
+                                          .withOpacity(0.9),
+                                    ),
+                                  ),
+                                  style: const ButtonStyle(
+                                      elevation: MaterialStatePropertyAll(0),
+                                      padding: MaterialStatePropertyAll(
+                                        EdgeInsets.symmetric(
+                                            vertical: 5, horizontal: 15),
+                                      ),
+                                      backgroundColor: MaterialStatePropertyAll(
+                                          Constants.kBlackColor)),
+                                ))
+                            .toList(),
+                      ),
+                      Text(
+                        widget.title + ' (${details?.releaseYear ?? '-'})',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Constants.kBlackColor.withOpacity(
+                            0.85,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: screenHeight <= 667 ? 10 : 20,
+                      ),
+                      Text(
+                        '${details?.releaseDate ?? '-'} | ${details?.runtime ?? 0} minutes | ${details?.genreFinal}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Constants.kBlackColor.withOpacity(
+                            0.75,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      RatingBar.builder(
+                        itemSize: 14,
+                        initialRating: widget.rating / 2,
+                        minRating: 1,
+                        maxRating: 5,
+                        direction: Axis.horizontal,
+                        itemCount: 5,
+                        allowHalfRating: true,
+                        itemPadding: const EdgeInsets.symmetric(horizontal: 1),
+                        itemBuilder: (context, _) => const Icon(
+                          Icons.star,
+                          color: Constants.kYellowColor,
+                        ),
+                        onRatingUpdate: (rating) {
+                          debugPrint(rating.toString());
+                        },
+                        unratedColor: Constants.kBlackColor,
+                      ),
+                      const SizedBox(
+                        height: 20,
+                      ),
+                      Text(
+                        widget.overview,
+                        textAlign: TextAlign.center,
+                        maxLines: screenHeight <= 667 ? 2 : 4,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Constants.kBlackColor.withOpacity(
+                            0.75,
+                          ),
                         ),
                       ),
                       SizedBox(
