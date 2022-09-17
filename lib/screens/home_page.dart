@@ -111,7 +111,6 @@ class _HomePageState extends State<HomePage> {
                         showNewPageErrorIndicatorAsGridChild: false,
                         showNoMoreItemsIndicatorAsGridChild: false,
                         builderDelegate: PagedChildBuilderDelegate(
-                            animateTransitions: true,
                             firstPageProgressIndicatorBuilder: (context) =>
                                 Center(
                                   child: CircularProgressIndicator(

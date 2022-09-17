@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:better_player/better_player.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -47,21 +48,21 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
       setState(() {
         streamingLinks = streamLink;
 
-        betterPlayerDataSource = BetterPlayerDataSource(
-            BetterPlayerDataSourceType.network,
-            (streamingLinks != null && streamingLinks!.length > 0)
-                ? streamingLinks![0].link
-                : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+        // betterPlayerDataSource = BetterPlayerDataSource(
+        //     BetterPlayerDataSourceType.network,
+        //     (streamingLinks != null && streamingLinks!.length > 0)
+        //         ? streamingLinks![0].link
+        //         : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
 
-        _betterPlayerController = BetterPlayerController(
-            BetterPlayerConfiguration(
-              aspectRatio: 16 / 9,
-              errorBuilder: (context, errorMessage) => Text('$errorMessage'),
-            ),
-            betterPlayerDataSource: betterPlayerDataSource);
+        // _betterPlayerController = BetterPlayerController(
+        //     BetterPlayerConfiguration(
+        //       aspectRatio: 16 / 9,
+        //       errorBuilder: (context, errorMessage) => Text('$errorMessage'),
+        //     ),
+        //     betterPlayerDataSource: betterPlayerDataSource);
         details = MovieDetails.fromJson(data.data['data']);
 
-        videoLoading = false;
+        // videoLoading = false;
       });
     } catch (e) {
       debugPrint(e.toString());
@@ -69,14 +70,20 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }
   }
 
-  bool videoLoading = true;
-  late BetterPlayerDataSource betterPlayerDataSource;
-  late BetterPlayerController _betterPlayerController;
+  bool videoLoading = false;
+  BetterPlayerDataSource? betterPlayerDataSource;
+  BetterPlayerController? _betterPlayerController;
   @override
   void initState() {
     if (mounted) {
       initFunction();
     }
+
+    // _betterPlayerController = BetterPlayerController(BetterPlayerConfiguration(
+    //   showPlaceholderUntilPlay: true,
+    //   placeholder: Text('Loading...'),
+    //   errorBuilder: (context, errorMessage) => Text('Error'),
+    // ));
 
     super.initState();
   }
@@ -85,19 +92,62 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     getData();
   }
 
-  void changeStreamingServer(Link link) {
+  void changeStreamingServer(Link link) async {
+    // print(link.link);
+
+    betterPlayerDataSource =
+        BetterPlayerDataSource(BetterPlayerDataSourceType.network, link.link);
+
+    _betterPlayerController = BetterPlayerController(
+      BetterPlayerConfiguration(
+        aspectRatio: 16 / 9,
+        errorBuilder: (context, errorMessage) => Text('$errorMessage'),
+      ),
+      // betterPlayerDataSource: betterPlayerDataSource
+    );
+
+    _betterPlayerController!.addEventsListener((event) => {
+          if (event == BetterPlayerEventType.exception)
+            {
+              debugPrint('ERROR EXCEPTION'),
+              AwesomeDialog(
+                context: context,
+                animType: AnimType.scale,
+                headerAnimationLoop: false,
+                dialogType: DialogType.error,
+                title: 'Upss...',
+                desc:
+                    "Terjadi Kesalahan Pada Streaming Server \n Silahkan Gunakan Server Lain!",
+                btnOkOnPress: () {},
+                btnOkIcon: Icons.check_circle,
+              ).show(),
+            }
+        });
+
     setState(() {
-      print(link.link);
-
-      betterPlayerDataSource =
-          BetterPlayerDataSource(BetterPlayerDataSourceType.network, link.link);
-
-      _betterPlayerController = BetterPlayerController(
-          BetterPlayerConfiguration(
-            aspectRatio: 16 / 9,
-            errorBuilder: (context, errorMessage) => Text('$errorMessage'),
-          ),
-          betterPlayerDataSource: betterPlayerDataSource);
+      videoLoading = true;
+    });
+    await Future.delayed(Duration(seconds: 1), () {});
+    _betterPlayerController!
+        .setupDataSource(betterPlayerDataSource!)
+        .then((response) {
+      print(response.toString());
+      videoLoading = false;
+      setState(() {});
+    }).catchError((error) async {
+      debugPrint('${error.toString()}');
+      debugPrint('VIDEO ERROR');
+      AwesomeDialog(
+        context: context,
+        animType: AnimType.scale,
+        headerAnimationLoop: false,
+        dialogType: DialogType.error,
+        title: 'Upss...',
+        desc:
+            "Terjadi Kesalahan Pada Streaming Server \n Silahkan Gunakan Server Lain!",
+        btnOkOnPress: () {},
+        btnOkIcon: Icons.check_circle,
+      ).show();
     });
   }
 
@@ -126,12 +176,28 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 AspectRatio(
                     aspectRatio: 16 / 9,
                     child: videoLoading
-                        ? Center(
-                            child: CircularProgressIndicator(
-                              color: Constants.kBlackColor,
-                            ),
+                        ? Container(
+                            color: Constants.kBlackColor,
+                            child: Center(
+                                child: CircularProgressIndicator(
+                              color: Constants.kWhiteColor,
+                            )),
                           )
-                        : BetterPlayer(controller: _betterPlayerController)),
+                        : (_betterPlayerController == null)
+                            ? Container(
+                                color: Constants.kBlackColor,
+                                child: Center(
+                                  child: Text(
+                                    'Choose Streaming Server',
+                                    style: TextStyle(
+                                        color: Constants.kWhiteColor,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1),
+                                  ),
+                                ),
+                              )
+                            : BetterPlayer(
+                                controller: _betterPlayerController!)),
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10),
                   child: Column(
@@ -141,7 +207,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                       SizedBox(
                         height: 20,
                       ),
-                      Text('Streaming Server :'),
+                      Text(
+                        'Streaming Server :',
+                      ),
                       Wrap(
                         spacing: 10,
                         children: streamingLinks!
