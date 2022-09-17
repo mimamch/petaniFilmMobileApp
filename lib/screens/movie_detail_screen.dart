@@ -109,6 +109,9 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     _betterPlayerController!.addEventsListener((event) => {
           if (event == BetterPlayerEventType.exception)
             {
+              setState(() {
+                _betterPlayerController = null;
+              }),
               debugPrint('ERROR EXCEPTION'),
               AwesomeDialog(
                 context: context,
@@ -116,8 +119,7 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
                 headerAnimationLoop: false,
                 dialogType: DialogType.error,
                 title: 'Upss...',
-                desc:
-                    "Terjadi Kesalahan Pada Streaming Server \n Silahkan Gunakan Server Lain!",
+                desc: "Terjadi Kesalahan! \n Silahkan Gunakan Server Lain!",
                 btnOkOnPress: () {},
                 btnOkIcon: Icons.check_circle,
               ).show(),
@@ -137,14 +139,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
     }).catchError((error) async {
       debugPrint('${error.toString()}');
       debugPrint('VIDEO ERROR');
+      setState(() {
+        _betterPlayerController = null;
+      });
       AwesomeDialog(
         context: context,
         animType: AnimType.scale,
         headerAnimationLoop: false,
         dialogType: DialogType.error,
         title: 'Upss...',
-        desc:
-            "Terjadi Kesalahan Pada Streaming Server \n Silahkan Gunakan Server Lain!",
+        desc: "Terjadi Kesalahan Pada Server! \n Silahkan Gunakan Server Lain!",
         btnOkOnPress: () {},
         btnOkIcon: Icons.check_circle,
       ).show();
