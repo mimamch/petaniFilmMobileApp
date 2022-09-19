@@ -3,8 +3,9 @@ class Link {
   int? tmdbId;
   String? imdbId;
   String? provider;
+  String? language;
   int? size;
-  late String link;
+  String link;
 
   Link(
       {this.id,
@@ -12,6 +13,7 @@ class Link {
       this.imdbId,
       this.provider,
       this.size,
+      this.language,
       required this.link});
 
   factory Link.fromJson(Map<String, dynamic> json) {
@@ -21,6 +23,7 @@ class Link {
         imdbId: json['imdbId'],
         tmdbId: json['tmdbId'],
         provider: json['provider'],
+        language: json['language'],
         size: json['size']);
   }
 }

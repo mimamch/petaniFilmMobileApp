@@ -55,9 +55,11 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     // getData(1);
-    _pagingController.addPageRequestListener((pageKey) {
-      _fetchPage(pageKey);
-    });
+    if (mounted) {
+      _pagingController.addPageRequestListener((pageKey) {
+        _fetchPage(pageKey);
+      });
+    }
     super.initState();
   }
 

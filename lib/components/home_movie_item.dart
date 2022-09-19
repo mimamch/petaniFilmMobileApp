@@ -52,9 +52,8 @@ class HomeMovieItem extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: Container(
-                  width: double.infinity,
-                  // width: 115,
-                  // height: 180,
+                  width: itemWidth,
+                  height: itemHeight,
                   color: Constants.kGreyColor,
                   child: Image.network(
                     'https://image.tmdb.org/t/p/w200/${movie.posterPath}',
@@ -67,6 +66,7 @@ class HomeMovieItem extends StatelessWidget {
                 child: Container(
                   // width: double.infinity,
                   // height: 40,
+
                   padding: EdgeInsets.symmetric(vertical: 5),
                   // color: Constants.kBlackColor.withOpacity(0.8),
                   decoration: BoxDecoration(
